@@ -28,7 +28,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "hello world"}
+    return {"Bravo Six": "Going Dark"}
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)

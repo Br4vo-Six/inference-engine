@@ -11,6 +11,9 @@ class Input(BaseModel):
     script_type: Optional[str] = Field(None, description="Script type")
     age: Optional[int] = Field(None, description="Age of the transaction")
 
+    class Config:
+        extra = 'ignore' 
+
 class Output(BaseModel):
     value: Optional[int] = Field(None, description="Output value")
     script: Optional[str] = Field(None, description="Script")
@@ -18,8 +21,11 @@ class Output(BaseModel):
     addresses: Optional[List[str]] = Field(None, description="List of addresses")
     script_type: Optional[str] = Field(None, description="Script type")
 
-class TransactionData(BaseModel):
-    hash: str = Field(..., description="Transaction hash")
+    class Config:
+        extra = 'ignore' 
+
+class Tx(BaseModel):
+    hash: str = Field(description="Transaction hash")
     block_hash: Optional[str] = Field(None, description="Block hash")
     block_height: Optional[int] = Field(None, description="Block height")
     addresses: Optional[List[str]] = Field(None, description="List of addresses")
@@ -36,3 +42,6 @@ class TransactionData(BaseModel):
     inputs: Optional[List[Input]] = Field(None, description="List of inputs")
     outputs: Optional[List[Output]] = Field(None, description="List of outputs")
     licit: Optional[bool] = Field(default=None, description="Is the transaction licit or illicit?") # True if tx is licit, False if illicit
+
+    class Config:
+        extra = 'ignore' 

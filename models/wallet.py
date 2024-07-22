@@ -14,7 +14,10 @@ class TxRef(BaseModel):
     spent: Optional[bool] = Field(default=False)
     spent_by: Optional[str] = Field(default=None)
 
-class AddressData(BaseModel):
+    class Config:
+        extra = 'ignore' 
+
+class Address(BaseModel):
     address: str
     total_received: Optional[int] = Field(default=0)
     total_sent: Optional[int] = Field(default=0)
@@ -22,3 +25,6 @@ class AddressData(BaseModel):
     n_tx: Optional[int] = Field(default=0)
     final_n_tx: Optional[int] = Field(default=0)
     txrefs: Optional[List[TxRef]] = Field(default=[])
+
+    class Config:
+        extra = 'ignore' 

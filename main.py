@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
+from routers import load_training
 
 config = dotenv_values(".env")
 
@@ -29,6 +30,8 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"Bravo Six": "Going Dark"}
+
+app.include_router(load_training.router)
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)

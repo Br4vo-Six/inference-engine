@@ -13,6 +13,8 @@ async def lifespan(app: FastAPI):
     app.mongodb_client = MongoClient(config["MONGODB_URI"])
     app.database = app.mongodb_client[config["DB_NAME"]]
     print("Connected to the MongoDB database!")
+    app.database['transactions'].create_index("hash", unique=True)
+    app.database['wallets'].create_index("address", unique=True)
     yield
     app.mongodb_client.close()
     print("Connection to MongoDB is closed")

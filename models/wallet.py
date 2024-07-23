@@ -13,11 +13,12 @@ class TxRef(BaseModel):
     double_spend: Optional[bool] = Field(default=None)
     spent: Optional[bool] = Field(default=False)
     spent_by: Optional[str] = Field(default=None)
+    licit: Optional[bool] = Field(default=None, description="Is the transaction licit or illicit?") # True if tx is licit, False if illicit
 
     class Config:
         extra = 'ignore' 
 
-class Address(BaseModel):
+class Wallet(BaseModel):
     address: str
     total_received: Optional[int] = Field(default=0)
     total_sent: Optional[int] = Field(default=0)

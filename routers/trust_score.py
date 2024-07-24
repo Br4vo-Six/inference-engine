@@ -8,10 +8,18 @@ from models import wallet, tx
 from pydantic.tools import parse_obj_as
 from scraper import scraper
 import math
+from pymongo import UpdateOne
 
 router = APIRouter()
 
 config = dotenv_values(".env")
+
+def multi_upsert_tx(txs, request):
+    operations = [
+        UpdateOne({"hash": entry["hash"]}, {"$set": entry}, upsert=True)
+        for entry in txs
+    ]
+    request.app.database['transactions'].bulk_write(operations)
 
 def calc_trust(wallet, r=9):
     nc = 0
@@ -62,7 +70,23 @@ async def trust_score(addr:str, request: Request):
         for tx in txs:
             # Scrape the data
             res.append(scraper.randomized_tx_fetch(tx['hash']))
-        request.app.database['transactions'].insert_many(res)
+        
+        # Update/insert new txs
+        multi_upsert_tx(res,request)
+
+        # Update/insert new txs neighbors
+        for el in res:
+            # input_queries = []
+            # output_queries = []
+            res = []
+            for input_tx in el['inputs']:
+                res.append(scraper.randomized_tx_fetch(input_tx['prev_hash']))
+                # input_queries.append(input_tx['prev_hash'])
+            for output_tx in el['outputs']:
+                if output_tx['spent_by'] != None:
+                    res.append(scraper.randomized_tx_fetch(output_tx['spent_by']))
+                    # output_queries.append(output_tx['spent_by'])
+            multi_upsert_tx(res,request)
 
         # Begin inference on all queries
         

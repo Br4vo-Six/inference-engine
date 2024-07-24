@@ -98,7 +98,11 @@ async def trust_score(addr:str, request: Request):
 
         # Fetch the wallet again and recalculate the score
         wallet = request.app.database["wallets"].find_one({"address": addr})
-        score = calc_trust(wallet)
+        try:
+            score = calc_trust(wallet)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status_code=500, detail=e)
         return {"address": addr, "score": score, "txrefs": wallet['txrefs']}
     except Exception as e:
         raise HTTPException(status_code=500, detail=e)

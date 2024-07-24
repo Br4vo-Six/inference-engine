@@ -24,7 +24,6 @@ class Wallet(BaseModel):
     total_sent: Optional[int] = Field(default=0)
     balance: Optional[int] = Field(default=0)
     n_tx: Optional[int] = Field(default=0)
-    final_n_tx: Optional[int] = Field(default=0)
     txrefs: Optional[List[TxRef]] = Field(default=[])
 
     class Config:

@@ -11,7 +11,7 @@ def load_proxies(file_path):
     proxies = [proxy.strip() for proxy in proxies]
     return proxies
 
-proxies = load_proxies(os.path.join(os.getcwd(), 'tested_proxies.txt'))
+proxies = load_proxies(os.path.join(os.getcwd(), 'scraper/tested_proxies.txt'))
 
 def fetchTx(tx_id, proxy=None):
     if config['SOURCE'] == 'BLOCKCYPHER':

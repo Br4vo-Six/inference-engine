@@ -16,10 +16,12 @@ config = dotenv_values(".env")
 
 def multi_upsert_tx(txs, request):
     operations = [
-        UpdateOne({"hash": entry["hash"]}, {"$set": entry}, upsert=True)
-        for entry in txs
+        UpdateOne({"hash": tx["hash"]}, {"$set": tx}, upsert=True)
+        for tx in txs
     ]
     request.app.database['transactions'].bulk_write(operations)
+    for tx in txs:
+        print(f"Successfully upsertex tx {tx['hash']}")
 
 def calc_trust(wallet, r=9):
     nc = 0
@@ -54,15 +56,16 @@ async def trust_score(addr:str, request: Request):
         queries = []
         if len(txs_old) > 0:
             for tx in txs_old:
-                txs[tx["hash"]] = tx
+                txs[tx["tx_hash"]] = tx
             for tx in txs_new:
-                if tx["hash"] not in txs:
-                    queries.append(tx["hash"])
-                if txs[tx["hash"]]['spent'] != tx['spent']:
-                    queries.append(tx["hash"])
-                txs[tx["hash"]] = tx
+                if tx["tx_hash"] not in txs:
+                    queries.append(tx["tx_hash"])
+                if txs[tx["tx_hash"]]['spent'] != tx['spent']:
+                    queries.append(tx["tx_hash"])
+                txs[tx["tx_hash"]] = tx
         else:
-            txs = txs_new
+            for tx in txs_new:
+                txs[tx["tx_hash"]] = tx
         txs = list(txs.values())
         request.app.database['wallets'].update_one({"address": addr}, {"txrefs": txs})
 

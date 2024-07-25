@@ -131,6 +131,7 @@ async def trust_score(addr:str, request: Request):
                     upsert_txs[n2['hash']] = n2
             e += 1
             print(f"Edge done: {e}/{len(res)}")
+        print(edges)
         all_txs = [v for _, v in upsert_txs.items()]
         multi_upsert_tx(all_txs, request)
 

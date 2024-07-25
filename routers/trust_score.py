@@ -9,6 +9,7 @@ from pydantic.tools import parse_obj_as
 from scraper import scraper
 import math
 from pymongo import UpdateOne
+import concurrent.futures
 
 router = APIRouter()
 
@@ -22,6 +23,15 @@ def multi_upsert_tx(txs, request):
     request.app.database['transactions'].bulk_write(operations)
     for tx in txs:
         print(f"Successfully upsertex tx {tx['hash']}")
+
+def parallelize_fetch_tx(txs):
+    workers = len(txs)
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(scraper.randomized_tx_fetch, txs[i]) for i in range(len(txs))]
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
+    return results
 
 def calc_trust(wallet, r=9):
     nc = 0
@@ -60,19 +70,17 @@ async def trust_score(addr:str, request: Request):
             for tx in txs_new:
                 if tx["tx_hash"] not in txs:
                     queries.append(tx["tx_hash"])
-                if txs[tx["tx_hash"]]['spent'] != tx['spent']:
-                    queries.append(tx["tx_hash"])
-                txs[tx["tx_hash"]] = tx
         else:
             for tx in txs_new:
                 txs[tx["tx_hash"]] = tx
         txs = list(txs.values())
-        request.app.database['wallets'].update_one({"address": addr}, {"txrefs": txs})
+        _ = request.app.database['wallets'].update_one(
+            {"address": addr},
+            {"$set": {"txrefs": txs}},
+            upsert=True  # Optional: to insert the document if it doesn't exist
+        )
 
-        res = []
-        for tx in txs:
-            # Scrape the data
-            res.append(scraper.randomized_tx_fetch(tx['hash']))
+        res = parallelize_fetch_tx([tx['tx_hash'] for tx in txs])
         
         # Update/insert new txs
         multi_upsert_tx(res,request)
@@ -81,14 +89,14 @@ async def trust_score(addr:str, request: Request):
         for el in res:
             # input_queries = []
             # output_queries = []
-            res = []
-            for input_tx in el['inputs']:
-                res.append(scraper.randomized_tx_fetch(input_tx['prev_hash']))
+            res = parallelize_fetch_tx([input_tx['prev_hash'] for input_tx in el['inputs']])
+            # for input_tx in el['inputs']:
+            #     res.append(scraper.randomized_tx_fetch(input_tx['prev_hash']))
                 # input_queries.append(input_tx['prev_hash'])
-            for output_tx in el['outputs']:
-                if output_tx['spent_by'] != None:
-                    res.append(scraper.randomized_tx_fetch(output_tx['spent_by']))
-                    # output_queries.append(output_tx['spent_by'])
+            # for output_tx in el['outputs']:
+            #     if output_tx['spent_by'] != None:
+            #         res.append(scraper.randomized_tx_fetch(output_tx['spent_by']))
+            #         # output_queries.append(output_tx['spent_by'])
             multi_upsert_tx(res,request)
 
         # Begin inference on all queries

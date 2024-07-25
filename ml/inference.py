@@ -1,4 +1,4 @@
-from torch import sigmoid
+from torch import sigmoid, from_numpy
 from ml.extractor import extract_txs
 from ml.model import get_ml_model
 from models.tx import Tx

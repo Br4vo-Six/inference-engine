@@ -14,17 +14,19 @@ def get_edge_index(edges: list[tuple[str, str]], tx_map: dict[str, int]):
         [tx_map[edge[0]], tx_map[edge[1]]]
         for edge in edges
     ]
+    edge_index = np.array(edge_index).T
+    edge_index = torch.tensor(edge_index, dtype=torch.long).contiguous()
     return edge_index
 
 
 def extract_txs(txs: list[Tx], edges: list[tuple[str, str]]):
     features = [
-        np.array(extract_tx_features(tx).values(), dtype=np.float32)
+        np.array(list(extract_tx_features(tx).values()), dtype=np.float32)
         for tx in txs
     ]
-    X = torch.tensor(np.array(features), dtype=torch.float32)
     scaler = get_scaler()
-    X = scaler.transform(X)
+    X = scaler.transform(np.array(features))
+    X = torch.tensor(X, dtype=torch.float32)
     tx_map = get_tx_map(txs)
     edge_index = get_edge_index(edges, tx_map)
 

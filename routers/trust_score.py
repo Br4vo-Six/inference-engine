@@ -12,6 +12,7 @@ import math
 from pymongo import UpdateOne
 import concurrent.futures
 from pydantic.tools import parse_obj_as
+from ml import inference
 
 router = APIRouter()
 config = dotenv_values(".env")
@@ -61,7 +62,9 @@ async def trust_score(addr:str, request: Request):
         txs = {}
         if (new_wallet := request.app.database["wallets"].find_one({"address": addr})) is not None:
             txs_old = new_wallet['txrefs']
-        txs_new = scraper.randomized_addr_fetch(addr)['txrefs']
+        else:
+            new_wallet = scraper.randomized_addr_fetch(addr)
+        txs_new = new_wallet['txrefs']
         if txs_new == None:
             raise HTTPException(status_code=404, detail="Wallet address not found on public ledger")
         queries = []
@@ -75,8 +78,8 @@ async def trust_score(addr:str, request: Request):
             for tx in txs_new:
                 txs[tx["tx_hash"]] = tx
         txs = list(txs.values())
+        print(new_wallet)
         new_wallet_obj = parse_obj_as(models.wallet.Wallet, new_wallet).dict()
-        print(new_wallet_obj)
         _ = request.app.database['wallets'].update_one(
             {"address": addr},
             {"$set": new_wallet_obj},
@@ -132,21 +135,23 @@ async def trust_score(addr:str, request: Request):
             e += 1
             print(f"Edge done: {e}/{len(res)}")
         print(edges)
-        all_txs = [v for _, v in upsert_txs.items()]
-        multi_upsert_tx(all_txs, request)
+        all_txs = [parse_obj_as(models.tx.Tx, v) for _, v in upsert_txs.items()]
+        multi_upsert_tx([tx.dict() for tx in all_txs], request)
 
         # Begin inference on all queries
         # Create edges: list[tuple[str, str]]
         # Create all_txs: list[Tx]
-        
-        inference_res = {}
+
+        # print(all_txs[0])
+        inference_res = inference.begin_inference(all_txs, edges=edges)
+        print(inference_res)
 
         filters = {"address": addr}
         update_operations = {"$set": {}}
         array_filters =  []
-        i = 0
-        for tx_hash, flag in inference_res:
-            update_operations["$set"][f"txrefs.$elem{i}.licit": flag]
+        i = 1
+        for tx_hash, flag in inference_res.items():
+            update_operations["$set"][f"txrefs.$[elem{i}].licit"] = bool(flag)
             array_filters.append({f"elem{i}.tx_hash": tx_hash})
             i += 1
         request.app.database["wallets"].update_one(filters, update_operations, array_filters=array_filters)

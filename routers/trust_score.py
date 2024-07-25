@@ -86,19 +86,26 @@ async def trust_score(addr:str, request: Request):
         multi_upsert_tx(res,request)
 
         # Update/insert new txs neighbors
-        neighbor_1 = {}
+        neighbors = {}
         edges = []
         e = 0
-        for el in res:
-            # input_queries = []
-            # output_queries = []
-            neighbor_1[el['hash']] = []
-            for input_tx in el['inputs']:
-                edges.append((el['hash'], input_tx['prev_hash']))
-                neighbor_1[el['hash']].append(parallelize_fetch_tx([input_tx['prev_hash']]))
+        for n0 in res:
+            if n0['hash'] not in neighbors:
+                neighbors[n0['hash']] = []
+            for n0_input_tx in n0['inputs']:
+                edges.append((n0['hash'], n0_input_tx['prev_hash']))
+                res_n1 = parallelize_fetch_tx([n0_input_tx['prev_hash']])
+                neighbors[n0['hash']].append(res_n1)
+                for n1 in res_n1:
+                    if n1['hash'] not in neighbors:
+                        neighbors[n1['hash']] = []
+                    for n1_input_tx in n1['inputs']:
+                        edges.append((n1['hash'], n1_input_tx['prev_hash']))
+                        res_n2 = parallelize_fetch_tx([n1_input_tx['prev_hash']])
+                        neighbors[n1['hash']].append(res_n2)
             e += 1
             print(f"Edge done: {e}/{len(res)}")
-        multi_upsert_tx([v for _, v in neighbor_1.items()], request) 
+        multi_upsert_tx([v for _, v in neighbors.items()], request)
 
         # Begin inference on all queries
         

@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from torch import load as load_model
 from torch.nn import Module, BatchNorm1d
 from torch.nn.functional import leaky_relu
@@ -35,3 +36,12 @@ class B6Model(Module):
         h = leaky_relu(h)
         out = self.tgn2(h, edge_index)
         return out
+
+
+b6_model: Optional[B6Model] = None
+
+
+def get_ml_model() -> B6Model:
+    if b6_model is None:
+        b6_model = B6Model()
+    return b6_model

@@ -187,3 +187,14 @@ def get_corr_coeff_features(features: dict[str, float], tx: Tx):
         features[f'in_age_out_value_{k}'] = v
 
     return features
+
+
+def extract_tx_features(tx: Tx):
+    features = dict()
+    features = get_basic_features(features, tx)
+    features = get_stat_features(features, tx)
+    features = get_derived_features(features, tx)
+    features, m1, m2 = get_address_features(features, tx)
+    features = get_additional_output_features(features, tx, m1, m2)
+    features = get_corr_coeff_features(features, tx)
+    return features

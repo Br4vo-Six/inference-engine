@@ -9,6 +9,5 @@ def get_scaler() -> StandardScaler:
     if b6_scaler is None:
         filename = './assets/B6_scaler.pkl'
         with open(filename, 'rb') as f:
-            scaler = pickle.load(f)
-        b6_scaler = scaler
-    return scaler
+            b6_scaler = pickle.load(f)
+    return b6_scaler

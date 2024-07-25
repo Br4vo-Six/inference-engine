@@ -12,6 +12,7 @@ def get_prediction_label(out, threshold=0.5):
 def begin_inference(txs: list[Tx], edges: list[tuple[str, str]]):
     X, edge_index, tx_map = extract_txs(txs, edges)
     model = get_ml_model()
+    model.eval()
     out = model(X, edge_index)
     labels = get_prediction_label(out)
     label_map = {txh: int(labels[idx]) for txh, idx in tx_map.items()}

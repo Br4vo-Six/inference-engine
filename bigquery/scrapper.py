@@ -95,3 +95,54 @@ SELECT
 `aggr_data` AS `aggr`
 """
     return json.dumps(send_query(query), cls=CustomEncoder)
+
+
+def scrape_transaction(tx_hash: str) -> str:
+    query = f"""WITH `denested_inp` AS (
+    SELECT
+    `ntab`.`hash` AS `tx_hash`,
+    `inps`.`spent_transaction_hash` AS `prev_hash`,
+    `inps`.`spent_output_index` AS `output_index`,
+    FROM `bravo-six-428908.bitcoin_data.transactions` AS `ntab`,
+    UNNEST(`ntab`.`inputs`) AS `inps`
+),
+`denested_out` AS (
+  SELECT
+  `out`.`value`,
+  `out`.`script_hex` AS `script`,
+  `out`.`addresses`,
+  `out`.`index`,
+  `ntab`.`hash` AS `tx_hash`
+  FROM `bravo-six-428908.bitcoin_data.transactions` AS `ntab`,
+    UNNEST(`ntab`.`outputs`) AS `out`
+),
+`joined` AS (
+  SELECT
+  `dot`.*,
+  COALESCE(`dip`.`tx_hash`) AS `spent_by`
+  FROM `denested_out` as `dot`
+  LEFT JOIN `denested_inp` as `dip`
+  ON `dot`.`tx_hash` = `dip`.`prev_hash`
+  AND `dot`.`index` = `dip`.`output_index`
+)
+
+SELECT `mtab`.`hash`, `mtab`.`block_hash`, `mtab`.`block_number` as `block_height`,
+(SELECT sum(`value`) from UNNEST(`inputs`)) as `total`,
+`mtab`.`fee` as `fees`, `mtab`.`size`, `mtab`.`virtual_size` as `vsize`,
+`mtab`.`block_timestamp` as `received`, `mtab`.`version` as `ver`,
+(SELECT count(*) FROM UNNEST(`inputs`)) as `vin_sz`, (SELECT count(*) FROM UNNEST(`outputs`)) as `vout_sz`,
+ARRAY(
+  SELECT AS STRUCT
+  `spent_transaction_hash` AS `prev_hash`,
+  `spent_output_index` AS `output_index`,
+  `value` AS `output_value`,
+  `addresses`,
+  `mtab`.`block_number` AS `age`
+  FROM UNNEST(`inputs`)
+)
+    as `inputs`,
+
+ARRAY(SELECT AS STRUCT * FROM `joined` AS `joi` WHERE `joi`.`tx_hash` = `mtab`.`hash`) AS `outputs`
+FROM `bravo-six-428908.bitcoin_data.transactions` AS `mtab`
+WHERE `hash` = "{tx_hash}";"""
+    return json.dumps(send_query(query), cls=CustomEncoder)

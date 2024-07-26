@@ -126,7 +126,8 @@ def get_additional_output_features(
             for address in addresses:
                 if address not in input_value_by_address:
                     input_value_by_address[address] = 0.0
-                input_value_by_address[address] += inp.value / n
+                input_value_by_address[address] += parse_optional(
+                    inp.output_value, 0) / n
         output_value_by_address = {}
         for outp in parse_optional(tx.outputs, []):
             addresses = parse_optional(outp.addresses, [])
@@ -134,7 +135,8 @@ def get_additional_output_features(
             for address in addresses:
                 if address not in output_value_by_address:
                     output_value_by_address[address] = 0.0
-                output_value_by_address[address] += outp.value / n
+                output_value_by_address[address] += parse_optional(
+                    outp.value, 0) / n
 
         changes = []
         changes_ratio = []
@@ -142,11 +144,18 @@ def get_additional_output_features(
             if k in output_value_by_address:
                 changes.append(output_value_by_address[k])
                 changes_ratio.append(
-                    output_value_by_address[k] / input_value_by_address[k])
+                    divide_by_zero_handler(
+                        output_value_by_address[k],
+                        input_value_by_address[k]
+                    )
+                )
         features['total_change'] = np.sum(changes)
-        features['mean_change'] = np.sum(changes) / len(changes)
-        features['mean_change_ratio'] = np.sum(
-            changes_ratio) / len(changes_ratio)
+        features['mean_change'] = divide_by_zero_handler(
+            np.sum(changes), len(changes))
+        features['mean_change_ratio'] = divide_by_zero_handler(
+            np.sum(changes_ratio),
+            len(changes_ratio)
+        )
 
     dust = [
         parse_optional(outp.value, 0)

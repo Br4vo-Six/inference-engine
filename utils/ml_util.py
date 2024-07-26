@@ -12,7 +12,7 @@ def parse_optional(value: Optional[T], default_value: T) -> T:
 
 
 def get_gini_coeff(np_list):
-    if len(np_list == 0):
+    if len(np_list) == 0:
         return 0
     sorted_data = np.sort(np_list)
     n = len(np_list)

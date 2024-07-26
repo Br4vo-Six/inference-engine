@@ -42,6 +42,7 @@ b6_model: Optional[B6Model] = None
 
 
 def get_ml_model() -> B6Model:
+    global b6_model
     if b6_model is None:
         b6_model = B6Model()
     return b6_model

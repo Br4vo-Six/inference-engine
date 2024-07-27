@@ -77,7 +77,6 @@ async def trust_score(addr:str, request: Request):
     start = time.time()
     try:
         txs_old = []
-        txs = {}
         if (old_wallet := request.app.database["wallets"].find_one({"address": addr})) is not None:
             txs_old = old_wallet['txrefs']
         if config['SOURCE'] == "BLOCKCYPHER":
@@ -86,31 +85,37 @@ async def trust_score(addr:str, request: Request):
             new_wallet = scrapper.scrape_wallet(addr)[0]
         else:
             raise HTTPException(status_code=500, detail="Scraping source env variable not found")
+        new_wallet = parse_obj_as(models.wallet.Wallet, new_wallet).dict()
         txs_new = new_wallet['txrefs']
         if txs_new == None:
             raise HTTPException(status_code=404, detail="Wallet address not found on public ledger")
         queries = []
         if len(txs_old) > 0:
+            txs = {}
             for tx in txs_old:
-                txs[tx["tx_hash"]] = tx
+                txs[tx["tx_hash"]] = tx["spent"]
             for tx in txs_new:
+                print(tx)
                 if tx["tx_hash"] not in txs:
                     queries.append(tx["tx_hash"])
+                    txs[tx["tx_hash"]] = tx["spent"]
+                    continue
+                if tx["spent"] != None and tx["spent"] != txs[tx["tx_hash"]]:
+                    queries.append(tx["tx_hash"])
+                    txs[tx["tx_hash"]] = tx["spent"]
         else:
-            for tx in txs_new:
-                txs[tx["tx_hash"]] = tx
-        txs = list(txs.values())
-        new_wallet_obj = parse_obj_as(models.wallet.Wallet, new_wallet).dict()
+            queries = [tx["tx_hash"] for tx in txs_new]
         _ = request.app.database['wallets'].update_one(
             {"address": addr},
-            {"$set": new_wallet_obj},
+            {"$set": new_wallet},
             upsert=True  # Optional: to insert the document if it doesn't exist
         )
         
-        res = parallelize_fetch_tx([tx['tx_hash'] for tx in txs])
+        if len(queries) > 0:
+            res = parallelize_fetch_tx(queries)
+            multi_upsert_tx(res,request)
         
         # Update/insert new txs
-        multi_upsert_tx(res,request)
 
         filters = [tx_new['tx_hash'] for tx_new in txs_new]
         # print(f"n0 filters: {filters}")
@@ -155,7 +160,7 @@ async def trust_score(addr:str, request: Request):
                     for n2 in n2_txs:
                         upsert_txs[n2['hash']] = n2
             e += 1
-            print(f"Edge done: {e}/{len(res)}")
+            print(f"Edge done: {e}/{len(txs_new)}")
         print(edges)
         all_txs = [parse_obj_as(models.tx.Tx, v) for _, v in upsert_txs.items()]
         multi_upsert_tx([tx.dict() for tx in all_txs], request)

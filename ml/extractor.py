@@ -26,5 +26,5 @@ def transform_txs(txs: list[Tx]):
     ]
     scaler = get_scaler()
     X = scaler.transform(np.array(features))
-    print(np.argwhere(np.isnan(X)))
+    # print(np.argwhere(np.isnan(X)))
     return X

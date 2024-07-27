@@ -60,6 +60,12 @@ def calc_trust(wallet, r=9):
             sc += tx['value']
     fc = sc*math.sqrt(nc)
     fd = sd*math.sqrt(nd)
+    print(f"NC: {nc}")
+    print(f"ND: {nd}")
+    print(f"SC: {sc}")
+    print(f"SD: {sd}")
+    print(f"FC: {fc}")
+    print(f"FD: {fd}")
     return fc/(fc+(r*fd))
 
 @router.get(
@@ -107,9 +113,9 @@ async def trust_score(addr:str, request: Request):
         multi_upsert_tx(res,request)
 
         filters = [tx_new['tx_hash'] for tx_new in txs_new]
-        print(f"n0 filters: {filters}")
+        # print(f"n0 filters: {filters}")
         n0_txs = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
-        print(f"n0 vertices: {[n0_tx['hash'] for n0_tx in n0_txs]}")
+        # print(f"n0 vertices: {[n0_tx['hash'] for n0_tx in n0_txs]}")
 
         # Update/insert new txs neighbors
         upsert_txs = {}
@@ -121,7 +127,7 @@ async def trust_score(addr:str, request: Request):
                 for n0_input_tx in n0['inputs']:
                     edges.append((n0['hash'], n0_input_tx['prev_hash']))
                 filters = [n0_input_tx['prev_hash'] for n0_input_tx in n0['inputs']]
-                print(f"n1 filters: {filters}")
+                # print(f"n1 filters: {filters}")
                 n1_fetch = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
                 n1_exist = [item["hash"] for item in n1_fetch]
                 n1_not_exist = [tx_hash for tx_hash in filters if tx_hash not in n1_exist]
@@ -130,13 +136,13 @@ async def trust_score(addr:str, request: Request):
                 else:
                     n1_res = []
                 n1_txs = n1_fetch + n1_res
-                print(f"n1 vertices: {[n1_tx['hash'] for n1_tx in n1_txs]}")
+                # print(f"n1 vertices: {[n1_tx['hash'] for n1_tx in n1_txs]}")
                 for n1 in n1_txs:
                     upsert_txs[n1['hash']] = n1
                     for n1_input_tx in n1['inputs']:
                         edges.append((n1['hash'], n1_input_tx['prev_hash']))
                     filters = [n1_input_tx['prev_hash'] for n1_input_tx in n1['inputs']]
-                    print(f"n2 filters: {filters}")
+                    # print(f"n2 filters: {filters}")
                     n2_fetch = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
                     n2_exist = [item["hash"] for item in n2_fetch]
                     n2_not_exist = [tx_hash for tx_hash in filters if tx_hash not in n2_exist]
@@ -145,7 +151,7 @@ async def trust_score(addr:str, request: Request):
                     else:
                         n2_res = []
                     n2_txs = n2_fetch + n2_res
-                    print(f"n2 vertices: {[n2_tx['hash'] for n2_tx in n2_txs]}")
+                    # print(f"n2 vertices: {[n2_tx['hash'] for n2_tx in n2_txs]}")
                     for n2 in n2_txs:
                         upsert_txs[n2['hash']] = n2
             e += 1
@@ -159,8 +165,10 @@ async def trust_score(addr:str, request: Request):
         # Create all_txs: list[Tx]
 
         # print(all_txs[0])
+        start_inf = time.time()
         inference_res = inference.begin_inference(all_txs, edges=edges)
-        print(inference_res)
+        end_inf = time.time()
+        print(f"Time taken for inference: {end_inf - start_inf} s")
 
         filters = {"address": addr}
         update_operations = {"$set": {}}
@@ -174,7 +182,7 @@ async def trust_score(addr:str, request: Request):
 
         # Fetch the wallet again and recalculate the score
         wallet = request.app.database["wallets"].find_one({"address": addr})
-        print(f"Wallet: {wallet}")
+        # print(f"Wallet: {wallet}")
         try:
             score = calc_trust(wallet)
         except Exception as e:

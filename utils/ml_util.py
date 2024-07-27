@@ -51,8 +51,8 @@ def get_stat_data(raw_list: list[int]):
     if np.isnan(value_kurt):
         value_kurt = 0
     value_gini = get_gini_coeff(np_list)
-    if np.isnan(value_skew):
-        print(f'NAN -> {np_list.shape}, skew={value_skew}, kurt={value_kurt}')
+    # if np.isnan(value_skew):
+    #     print(f'NAN -> {np_list.shape}, skew={value_skew}, kurt={value_kurt}')
     return {
         'min': value_min,
         'max': value_max,

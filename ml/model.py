@@ -4,6 +4,8 @@ from torch import load as load_model
 from torch.nn import Module, BatchNorm1d
 from torch.nn.functional import leaky_relu
 from torch_geometric.nn.conv import TAGConv
+from sklearn.ensemble import RandomForestClassifier
+import joblib
 
 
 # B6TAGCN
@@ -38,11 +40,22 @@ class B6Model(Module):
         return out
 
 
-b6_model: Optional[B6Model] = None
+b6_gnn_model: Optional[B6Model] = None
 
 
-def get_ml_model() -> B6Model:
-    global b6_model
-    if b6_model is None:
-        b6_model = B6Model()
-    return b6_model
+def get_gnn_model() -> B6Model:
+    global b6_gnn_model
+    if b6_gnn_model is None:
+        b6_gnn_model = B6Model()
+    return b6_gnn_model
+
+
+b6_rf_model: Optional[RandomForestClassifier] = None
+
+
+def get_rf_model() -> RandomForestClassifier:
+    global b6_rf_model
+    if b6_rf_model is None:
+        filename = './assets/B6_rf.joblib'
+        b6_rf_model = joblib.load(filename)
+    return b6_rf_model

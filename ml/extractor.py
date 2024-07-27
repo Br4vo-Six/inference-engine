@@ -19,15 +19,11 @@ def get_edge_index(edges: list[tuple[str, str]], tx_map: dict[str, int]):
     return edge_index
 
 
-def extract_txs(txs: list[Tx], edges: list[tuple[str, str]]):
+def transform_txs(txs: list[Tx]):
     features = [
         np.array(list(extract_tx_features(tx).values()), dtype=np.float32)
         for tx in txs
     ]
     scaler = get_scaler()
     X = scaler.transform(np.array(features))
-    X = torch.tensor(X, dtype=torch.float32)
-    tx_map = get_tx_map(txs)
-    edge_index = get_edge_index(edges, tx_map)
-
-    return X, edge_index, tx_map
+    return X

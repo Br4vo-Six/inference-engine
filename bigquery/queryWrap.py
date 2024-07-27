@@ -5,7 +5,7 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 
 
-key_path = "../bravo-six_query_credential.json"
+key_path = "./bravo-six_query_credential.json"
 
 def send_query(query: str) -> str:
     credentials = service_account.Credentials.from_service_account_file(key_path)

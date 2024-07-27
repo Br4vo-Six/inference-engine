@@ -13,6 +13,7 @@ from pymongo import UpdateOne
 import concurrent.futures
 from pydantic.tools import parse_obj_as
 from ml import inference
+from bigquery import scrapper
 
 router = APIRouter()
 config = dotenv_values(".env")
@@ -30,7 +31,12 @@ def parallelize_fetch_tx(txs):
     workers = len(txs)
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(scraper.randomized_tx_fetch, txs[i]) for i in range(len(txs))]
+        if config['SOURCE'] == "BLOCKCYPHER":
+            futures = [executor.submit(scraper.randomized_tx_fetch, txs[i]) for i in range(len(txs))]
+        elif config["SOURCE"] == "BIGQUERY":
+            futures = [executor.submit(scrapper.scrape_transaction, txs[i]) for i in range(len(txs))]
+        else:
+            return None
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
     return results
@@ -53,7 +59,7 @@ def calc_trust(wallet, r=9):
 
 @router.get(
         "/wallet/{addr}/trust-score", 
-        response_description="Seed initial training dataset from local json file", 
+        response_description="Get wallet trust score", 
         status_code=status.HTTP_200_OK,
     )
 async def trust_score(addr:str, request: Request):
@@ -63,7 +69,12 @@ async def trust_score(addr:str, request: Request):
         if (new_wallet := request.app.database["wallets"].find_one({"address": addr})) is not None:
             txs_old = new_wallet['txrefs']
         else:
-            new_wallet = scraper.randomized_addr_fetch(addr)
+            if config['SOURCE'] == "BLOCKCYPHER":
+                new_wallet = scraper.randomized_addr_fetch(addr)
+            elif config["SOURCE"] == "BIGQUERY":
+                new_wallet = scrapper.scrape_wallet(addr)
+            else:
+                raise HTTPException(status_code=500, detail="Scraping source env variable not found")
         txs_new = new_wallet['txrefs']
         if txs_new == None:
             raise HTTPException(status_code=404, detail="Wallet address not found on public ledger")

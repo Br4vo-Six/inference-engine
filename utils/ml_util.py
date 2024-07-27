@@ -5,6 +5,12 @@ from scipy.stats import skew, kurtosis, pearsonr
 T = TypeVar("T")
 
 
+def divide_by_zero_handler(a, b):
+    if b != 0:
+        return a/b
+    return 0
+
+
 def parse_optional(value: Optional[T], default_value: T) -> T:
     if value is None:
         return default_value
@@ -18,7 +24,11 @@ def get_gini_coeff(np_list):
     n = len(np_list)
     gini_numerator = np.sum((2 * np.arange(1, n + 1) - n - 1) * sorted_data)
     gini_denominator = n * np.sum(sorted_data)
-    gini_coefficient = gini_numerator / gini_denominator
+
+    gini_coefficient = divide_by_zero_handler(
+        gini_numerator,
+        gini_denominator
+    )
 
     return gini_coefficient
 
@@ -53,17 +63,14 @@ def get_stat_data(raw_list: list[int]):
     }
 
 
-def divide_by_zero_handler(a, b):
-    if b != 0:
-        return a/b
-    return 0
-
-
 def get_diversity_data(raw_list: list[int]):
     if len(raw_list) == 0:
         return 0
     np_list = np.array(raw_list, dtype=np.float64)
-    probs = np_list / np.sum(np_list)
+    s = np.sum(np_list)
+    if s == 0:
+        return 0
+    probs = np_list / s
     entropy = -np.sum(probs * np.log2(probs))
     return entropy
 

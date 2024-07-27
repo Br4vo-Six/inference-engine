@@ -1,0 +1,14 @@
+[Unit]
+Description=Bittrack backend server
+After=network.target
+
+[Service]
+User=paprikax33
+Group=paprikax33
+WorkingDirectory=/home/paprikax33/instance/inference-engine
+ExecStart=/home/paprikax33/instance/envir/bin/python /home/paprikax33/instance/inference-engine/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

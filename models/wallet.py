@@ -4,7 +4,7 @@ from datetime import datetime
 
 class TxRef(BaseModel):
     tx_hash: str
-    block_height: int
+    block_height: Optional[int] = Field(default=None)
     tx_input_n: Optional[int] = Field(default=0)
     tx_output_n: Optional[int] = Field(default=0)
     value: Optional[int] = Field(default=0)

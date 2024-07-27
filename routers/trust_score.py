@@ -38,7 +38,11 @@ def parallelize_fetch_tx(txs):
         else:
             return None
         for future in concurrent.futures.as_completed(futures):
-            results.append(future.result())
+            if config['SOURCE'] == "BIGQUERY":
+                if len(future.result()) > 0:
+                    results.append(future.result()[0])
+            else:
+                results.append(future.result())
     return results
 
 def calc_trust(wallet, r=9):
@@ -72,7 +76,7 @@ async def trust_score(addr:str, request: Request):
             if config['SOURCE'] == "BLOCKCYPHER":
                 new_wallet = scraper.randomized_addr_fetch(addr)
             elif config["SOURCE"] == "BIGQUERY":
-                new_wallet = scrapper.scrape_wallet(addr)
+                new_wallet = scrapper.scrape_wallet(addr)[0]
             else:
                 raise HTTPException(status_code=500, detail="Scraping source env variable not found")
         txs_new = new_wallet['txrefs']

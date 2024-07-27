@@ -44,10 +44,15 @@ def get_stat_data(raw_list: list[int]):
     value_mean = np_list.mean()
     value_var = np.var(np_list)
     value_std = np_list.std()
-    value_skew = skew(np_list) if len(np_list) > 0 else 0
-    value_kurt = kurtosis(np_list) if len(np_list) > 0 else 0
+    value_skew = skew(np_list)
+    if np.isnan(value_skew):
+        value_skew = 0
+    value_kurt = kurtosis(np_list)
+    if np.isnan(value_kurt):
+        value_kurt = 0
     value_gini = get_gini_coeff(np_list)
-
+    if np.isnan(value_skew):
+        print(f'NAN -> {np_list.shape}, skew={value_skew}, kurt={value_kurt}')
     return {
         'min': value_min,
         'max': value_max,

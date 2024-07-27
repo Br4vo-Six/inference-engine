@@ -3,7 +3,7 @@ import torch
 from ml.features import extract_tx_features
 from ml.scaler import get_scaler
 from models.tx import Tx
-
+import math
 
 def get_tx_map(txs: list[Tx]):
     return {tx.hash: i for i, tx in enumerate(txs)}
@@ -26,4 +26,5 @@ def transform_txs(txs: list[Tx]):
     ]
     scaler = get_scaler()
     X = scaler.transform(np.array(features))
+    print(np.argwhere(np.isnan(X)))
     return X

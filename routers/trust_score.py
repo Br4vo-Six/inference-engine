@@ -14,6 +14,7 @@ import concurrent.futures
 from pydantic.tools import parse_obj_as
 from ml import inference
 from bigquery import scrapper
+import time
 
 router = APIRouter()
 config = dotenv_values(".env")
@@ -67,18 +68,18 @@ def calc_trust(wallet, r=9):
         status_code=status.HTTP_200_OK,
     )
 async def trust_score(addr:str, request: Request):
+    start = time.time()
     try:
         txs_old = []
         txs = {}
-        if (new_wallet := request.app.database["wallets"].find_one({"address": addr})) is not None:
-            txs_old = new_wallet['txrefs']
+        if (old_wallet := request.app.database["wallets"].find_one({"address": addr})) is not None:
+            txs_old = old_wallet['txrefs']
+        if config['SOURCE'] == "BLOCKCYPHER":
+            new_wallet = scraper.randomized_addr_fetch(addr)
+        elif config["SOURCE"] == "BIGQUERY":
+            new_wallet = scrapper.scrape_wallet(addr)[0]
         else:
-            if config['SOURCE'] == "BLOCKCYPHER":
-                new_wallet = scraper.randomized_addr_fetch(addr)
-            elif config["SOURCE"] == "BIGQUERY":
-                new_wallet = scrapper.scrape_wallet(addr)[0]
-            else:
-                raise HTTPException(status_code=500, detail="Scraping source env variable not found")
+            raise HTTPException(status_code=500, detail="Scraping source env variable not found")
         txs_new = new_wallet['txrefs']
         if txs_new == None:
             raise HTTPException(status_code=404, detail="Wallet address not found on public ledger")
@@ -93,7 +94,6 @@ async def trust_score(addr:str, request: Request):
             for tx in txs_new:
                 txs[tx["tx_hash"]] = tx
         txs = list(txs.values())
-        print(new_wallet)
         new_wallet_obj = parse_obj_as(models.wallet.Wallet, new_wallet).dict()
         _ = request.app.database['wallets'].update_one(
             {"address": addr},
@@ -182,4 +182,12 @@ async def trust_score(addr:str, request: Request):
             raise HTTPException(status_code=500, detail=e)
         return {"address": addr, "score": score, "txrefs": wallet['txrefs']}
     except Exception as e:
+        end = time.time()
+        duration = end - start
+        print(f"Request finished in {duration} s")
         raise HTTPException(status_code=500, detail=e)
+    finally:
+        end = time.time()
+        duration = end - start
+        print(f"Request finished in {duration} s")
+

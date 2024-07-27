@@ -117,36 +117,37 @@ async def trust_score(addr:str, request: Request):
         e = 0
         for n0 in n0_txs:
             upsert_txs[n0['hash']] = n0
-            for n0_input_tx in n0['inputs']:
-                edges.append((n0['hash'], n0_input_tx['prev_hash']))
-            filters = [n0_input_tx['prev_hash'] for n0_input_tx in n0['inputs']]
-            print(f"n1 filters: {filters}")
-            n1_fetch = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
-            n1_exist = [item["hash"] for item in n1_fetch]
-            n1_not_exist = [tx_hash for tx_hash in filters if tx_hash not in n1_exist]
-            if len(n1_not_exist) > 0:
-                n1_res = parallelize_fetch_tx(n1_not_exist)
-            else:
-                n1_res = []
-            n1_txs = n1_fetch + n1_res
-            print(f"n1 vertices: {[n1_tx['hash'] for n1_tx in n1_txs]}")
-            for n1 in n1_txs:
-                upsert_txs[n1['hash']] = n1
-                for n1_input_tx in n1['inputs']:
-                    edges.append((n1['hash'], n1_input_tx['prev_hash']))
-                filters = [n1_input_tx['prev_hash'] for n1_input_tx in n1['inputs']]
-                print(f"n2 filters: {filters}")
-                n2_fetch = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
-                n2_exist = [item["hash"] for item in n2_fetch]
-                n2_not_exist = [tx_hash for tx_hash in filters if tx_hash not in n2_exist]
-                if len(n2_not_exist) > 0:
-                    n2_res = parallelize_fetch_tx(n2_not_exist)
+            if config['MODEL'] == 'GNN':
+                for n0_input_tx in n0['inputs']:
+                    edges.append((n0['hash'], n0_input_tx['prev_hash']))
+                filters = [n0_input_tx['prev_hash'] for n0_input_tx in n0['inputs']]
+                print(f"n1 filters: {filters}")
+                n1_fetch = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
+                n1_exist = [item["hash"] for item in n1_fetch]
+                n1_not_exist = [tx_hash for tx_hash in filters if tx_hash not in n1_exist]
+                if len(n1_not_exist) > 0:
+                    n1_res = parallelize_fetch_tx(n1_not_exist)
                 else:
-                    n2_res = []
-                n2_txs = n2_fetch + n2_res
-                print(f"n2 vertices: {[n2_tx['hash'] for n2_tx in n2_txs]}")
-                for n2 in n2_txs:
-                    upsert_txs[n2['hash']] = n2
+                    n1_res = []
+                n1_txs = n1_fetch + n1_res
+                print(f"n1 vertices: {[n1_tx['hash'] for n1_tx in n1_txs]}")
+                for n1 in n1_txs:
+                    upsert_txs[n1['hash']] = n1
+                    for n1_input_tx in n1['inputs']:
+                        edges.append((n1['hash'], n1_input_tx['prev_hash']))
+                    filters = [n1_input_tx['prev_hash'] for n1_input_tx in n1['inputs']]
+                    print(f"n2 filters: {filters}")
+                    n2_fetch = list(request.app.database["transactions"].find({"hash": {"$in": filters}}))
+                    n2_exist = [item["hash"] for item in n2_fetch]
+                    n2_not_exist = [tx_hash for tx_hash in filters if tx_hash not in n2_exist]
+                    if len(n2_not_exist) > 0:
+                        n2_res = parallelize_fetch_tx(n2_not_exist)
+                    else:
+                        n2_res = []
+                    n2_txs = n2_fetch + n2_res
+                    print(f"n2 vertices: {[n2_tx['hash'] for n2_tx in n2_txs]}")
+                    for n2 in n2_txs:
+                        upsert_txs[n2['hash']] = n2
             e += 1
             print(f"Edge done: {e}/{len(res)}")
         print(edges)

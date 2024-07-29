@@ -33,7 +33,6 @@ app.add_middleware(
 async def root():
     return {"Bravo Six": "Going Dark"}
 
-app.include_router(load_training.router)
 app.include_router(trust_score.router)
 
 if __name__ == '__main__':
